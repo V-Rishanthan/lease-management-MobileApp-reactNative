@@ -1,12 +1,18 @@
 import {
+  Banknote,
+  Building2,
   Calendar,
   Camera,
   ChevronRight,
+  FileText,
+  Hash,
   UploadCloud,
 } from "lucide-react-native";
 import React, { useState } from "react";
 import {
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -19,179 +25,294 @@ import Colors from "../../constants/Colors";
 
 const { width } = Dimensions.get("window");
 
-export default function Recepts() {
+export default function Receipts() {
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState("");
   const [bank, setBank] = useState("");
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
 
-  const handleTakePhoto = () => {
-    // TODO: wire camera
-  };
-  const handleChooseFile = () => {
-    // TODO: open file picker
-  };
   const handleSubmit = () => {
-    // TODO: submit form
     console.log({ amount, date, bank, reference, notes });
   };
 
   return (
     <SafeAreaView style={styles.safe}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Upload Bank Receipt</Text>
-        <Text style={styles.subtitle}>
-          Scan or upload your transaction proof
-        </Text>
-
-        <View style={styles.uploadBox}>
-          <View style={styles.cameraCircle}>
-            <Camera color={Colors.white} size={20} />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header Section */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Submit Receipt</Text>
+            <Text style={styles.subtitle}>
+              Upload your bank slip to verify your transaction
+            </Text>
           </View>
-          <Text style={styles.uploadTitle}>Upload Bank Receipt</Text>
-          <Text style={styles.uploadHint}>
-            Scan or upload your transaction proof
-          </Text>
 
-          <View style={styles.uploadButtons}>
-            <TouchableOpacity
-              style={[styles.btn, styles.primaryBtn]}
-              onPress={handleTakePhoto}
-            >
-              <Camera color={Colors.white} size={14} />
-              <Text style={styles.btnTextPrimary}> Take Photo</Text>
-            </TouchableOpacity>
+          {/* Enhanced Upload Zone */}
+          <View style={styles.uploadCard}>
+            <View style={styles.dashedBorder}>
+              <View style={styles.iconCircle}>
+                <UploadCloud color={Colors.primary} size={28} />
+              </View>
+              <Text style={styles.uploadTitle}>Capture or Upload Slip</Text>
+              <Text style={styles.uploadHint}>
+                Supports JPG, PNG or PDF (Max 5MB)
+              </Text>
 
-            <TouchableOpacity
-              style={[styles.btn, styles.outlineBtn]}
-              onPress={handleChooseFile}
-            >
-              <UploadCloud color={Colors.primary} size={14} />
-              <Text style={styles.btnTextOutline}> Choose File</Text>
-            </TouchableOpacity>
+              <View style={styles.buttonGroup}>
+                <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
+                  <Camera color={Colors.white} size={18} />
+                  <Text style={styles.actionBtnText}>Take Photo</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.secondaryBtn}
+                  activeOpacity={0.7}
+                >
+                  <FileText color={Colors.primary} size={18} />
+                  <Text style={styles.secondaryBtnText}>Files</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
-        </View>
 
-        <Text style={styles.fieldLabel}>Amount Paid</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="LKR 0.00"
-          keyboardType="numeric"
-          value={amount}
-          onChangeText={setAmount}
-        />
+          {/* Form Section */}
+          <View style={styles.formContainer}>
+            <Text style={styles.sectionHeader}>Transaction Details</Text>
 
-        <Text style={styles.fieldLabel}>Payment Date</Text>
-        <TouchableOpacity style={styles.inputRow} onPress={() => {}}>
-          <Text style={styles.inputText}>{date || "mm/dd/yyyy"}</Text>
-          <Calendar color={Colors.textMid} size={18} />
-        </TouchableOpacity>
+            {/* Amount Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Amount Paid</Text>
+              <View style={styles.inputWrapper}>
+                <Banknote
+                  size={20}
+                  color={Colors.textLight}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="0.00"
+                  placeholderTextColor={Colors.textMuted}
+                  keyboardType="numeric"
+                  value={amount}
+                  onChangeText={setAmount}
+                />
+                <Text style={styles.currency}>LKR</Text>
+              </View>
+            </View>
 
-        <Text style={styles.fieldLabel}>Bank Name</Text>
-        <TouchableOpacity style={styles.inputRow} onPress={() => {}}>
-          <Text style={styles.inputText}>{bank || "Select your bank"}</Text>
-          <ChevronRight color={Colors.textMid} size={18} />
-        </TouchableOpacity>
+            {/* Date & Bank Row */}
+            <View style={styles.row}>
+              <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+                <Text style={styles.label}>Date</Text>
+                <TouchableOpacity style={styles.inputWrapper}>
+                  <Calendar size={18} color={Colors.textLight} />
+                  <Text style={styles.inputText}>{date || "mm/dd/yy"}</Text>
+                </TouchableOpacity>
+              </View>
 
-        <Text style={styles.fieldLabel}>Reference Number</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="TXN12345678"
-          value={reference}
-          onChangeText={setReference}
-        />
+              <View style={[styles.inputGroup, { flex: 1.5 }]}>
+                <Text style={styles.label}>Bank</Text>
+                <TouchableOpacity style={styles.inputWrapper}>
+                  <Building2 size={18} color={Colors.textLight} />
+                  <Text style={styles.inputText} numberOfLines={1}>
+                    {bank || "Select Bank"}
+                  </Text>
+                  <ChevronRight size={16} color={Colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            </View>
 
-        <Text style={styles.fieldLabel}>Notes (Optional)</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Add extra details here..."
-          value={notes}
-          onChangeText={setNotes}
-          multiline
-        />
+            {/* Reference Number */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Reference Number</Text>
+              <View style={styles.inputWrapper}>
+                <Hash
+                  size={18}
+                  color={Colors.textLight}
+                  style={styles.inputIcon}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="TXN / Ref Number"
+                  placeholderTextColor={Colors.textMuted}
+                  value={reference}
+                  onChangeText={setReference}
+                />
+              </View>
+            </View>
 
-        <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-          <Text style={styles.submitText}>Submit Receipt</Text>
-          <ChevronRight color={Colors.white} size={18} />
-        </TouchableOpacity>
-      </ScrollView>
+            {/* Notes */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Notes (Optional)</Text>
+              <TextInput
+                style={styles.textArea}
+                placeholder="Additional details..."
+                placeholderTextColor={Colors.textMuted}
+                multiline
+                numberOfLines={4}
+                value={notes}
+                onChangeText={setNotes}
+              />
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.submitBtn}
+            onPress={handleSubmit}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.submitText}>Submit Verification</Text>
+            <ChevronRight color={Colors.white} size={20} />
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 20, paddingBottom: 40, marginTop: 30 },
+  content: { padding: 20, paddingBottom: 60 },
+  header: { marginBottom: 24, marginTop: 40 },
   title: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 20,
+    fontWeight: "800",
     color: Colors.textDark,
-    marginBottom: 6,
+    letterSpacing: -0.5,
   },
-  subtitle: { color: Colors.textMid, marginBottom: 16 },
+  subtitle: { fontSize: 15, color: Colors.textMid, marginTop: 4 },
 
-  uploadBox: {
-    borderWidth: 1,
-    borderStyle: "dashed",
-    borderColor: Colors.borderLight,
-    borderRadius: 12,
-    padding: 18,
-    alignItems: "center",
-    backgroundColor: Colors.surface,
-    marginBottom: 18,
+  /* Upload Card */
+  uploadCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    padding: 12,
+    marginBottom: 24,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  cameraCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primaryFade,
+  dashedBorder: {
+    borderWidth: 2,
+    borderColor: Colors.borderLight,
+    borderStyle: "dashed",
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: Colors.successLight,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
   },
-  uploadTitle: { fontWeight: "700", color: Colors.textDark },
-  uploadHint: { color: Colors.textMid, fontSize: 12, marginBottom: 12 },
-
-  uploadButtons: { flexDirection: "row", gap: 12 },
-  btn: {
+  uploadTitle: { fontSize: 16, fontWeight: "700", color: Colors.textDark },
+  uploadHint: {
+    fontSize: 12,
+    color: Colors.textMuted,
+    marginTop: 4,
+    marginBottom: 20,
+  },
+  buttonGroup: { flexDirection: "row", gap: 12 },
+  actionBtn: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-  },
-  primaryBtn: { backgroundColor: Colors.primary, marginRight: 10 },
-  outlineBtn: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    paddingHorizontal: 12,
-  },
-  btnTextPrimary: { color: Colors.white, fontWeight: "700" },
-  btnTextOutline: { color: Colors.textDark, fontWeight: "700" },
-
-  fieldLabel: { color: Colors.textMid, marginTop: 14, marginBottom: 8 },
-  input: { backgroundColor: Colors.surface, padding: 12, borderRadius: 10 },
-  inputRow: {
-    backgroundColor: Colors.surface,
-    padding: 12,
-    borderRadius: 10,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  inputText: { color: Colors.textMid },
-  textArea: { height: 100, textAlignVertical: "top" },
-
-  submitBtn: {
-    marginTop: 20,
     backgroundColor: Colors.primary,
-    padding: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 12,
+    gap: 8,
+  },
+  actionBtnText: { color: Colors.white, fontWeight: "700", fontSize: 14 },
+  secondaryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.white,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  secondaryBtnText: { color: Colors.primary, fontWeight: "700", fontSize: 14 },
+
+  /* Form Styling */
+  formContainer: { gap: 16 },
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.textDark,
+    marginBottom: 4,
+  },
+  inputGroup: { marginBottom: 4 },
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: Colors.textMid,
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  inputWrapper: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    height: 54,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  inputIcon: { marginRight: 12 },
+  input: { flex: 1, fontSize: 16, color: Colors.textDark, fontWeight: "500" },
+  currency: { fontWeight: "700", color: Colors.textMuted, fontSize: 14 },
+  inputText: {
+    flex: 1,
+    fontSize: 15,
+    color: Colors.textDark,
+    fontWeight: "500",
+    marginLeft: 10,
+  },
+  row: { flexDirection: "row" },
+  textArea: {
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    padding: 16,
+    height: 100,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    fontSize: 15,
+    color: Colors.textDark,
+    textAlignVertical: "top",
+  },
+
+  /* Submit Button */
+  submitBtn: {
+    marginTop: 32,
+    backgroundColor: Colors.primary,
+    height: 60,
+    borderRadius: 18,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    shadowColor: Colors.primary,
+    shadowOpacity: 0.3,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 15,
+    elevation: 8,
+    gap: 10,
   },
-  submitText: { color: Colors.white, fontWeight: "700", marginRight: 8 },
+  submitText: { color: Colors.white, fontSize: 18, fontWeight: "700" },
 });

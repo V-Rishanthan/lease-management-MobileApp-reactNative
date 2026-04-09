@@ -24,6 +24,15 @@ const Colors = {
 
   white: "#FFFFFF",
   black: "#000000",
+
+  // Home bg box
+  homeBox1: "#6060f4",
+  homeBox2: "#5291a5",
+  homeBox3: "#1db954",
+  homeBox4: "#f0fdf4",
+
+  // icons
+  walletIcon: "#22C55E",
 };
 
 export default Colors;
