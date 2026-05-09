@@ -1,12 +1,11 @@
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   Bell,
   BellRing,
-  Calendar,
   ChevronLeft,
   ChevronRight,
   Clock,
-  Clock as ClockIcon,
   Save,
 } from "lucide-react-native";
 import React, { useState } from "react";
@@ -23,19 +22,19 @@ import {
 import Colors from "../../constants/Colors";
 
 const reminderOptions = [
-  "7 Days Before",
-  "3 Days Before",
-  "1 Day Before",
-  "Same Day",
+  { label: "7 Days", value: "7 Days Before" },
+  { label: "3 Days", value: "3 Days Before" },
+  { label: "1 Day", value: "1 Day Before" },
+  { label: "Same Day", value: "Same Day" },
 ];
+
+const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
 const AlertScreen = () => {
   const [dateTime, setDateTime] = useState(new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedOption, setSelectedOption] = useState(reminderOptions[1]);
+  const [selectedOption, setSelectedOption] = useState("3 Days Before");
   const [pushEnabled, setPushEnabled] = useState(true);
-
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(() => {
     const d = new Date();
@@ -88,52 +87,62 @@ const AlertScreen = () => {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
+        {/* ── HEADER ── */}
         <View style={styles.headerSection}>
-          <Bell size={28} color={Colors.primary} />
-          <Text style={styles.header}>Set Reminder</Text>
-          <Text style={styles.headerSubtext}>Never miss a payment again</Text>
+          <LinearGradient
+            colors={["#4A56C8", "#1C2478"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.headerIcon}
+          >
+            <Bell size={22} color={Colors.white} />
+          </LinearGradient>
+          <View style={styles.headerText}>
+            <Text style={styles.header}>Set Reminder</Text>
+            <Text style={styles.headerSubtext}>Never miss a payment again</Text>
+          </View>
         </View>
 
-        <Text style={styles.sectionTitle}>
-          <Calendar size={14} color={Colors.textMuted} /> DATE & TIME
-        </Text>
-
+        {/* ── CALENDAR CARD ── */}
         <View style={styles.calendarCard}>
+          {/* Month Nav */}
           <View style={styles.monthRow}>
             <TouchableOpacity style={styles.chevButton} onPress={prevMonth}>
-              <ChevronLeft size={20} color={Colors.textDark} />
+              <ChevronLeft size={18} color={Colors.textDark} />
             </TouchableOpacity>
             <Text style={styles.monthText}>
-              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+              {monthNames[currentMonth.getMonth()]}{" "}
+              <Text style={styles.monthYear}>{currentMonth.getFullYear()}</Text>
             </Text>
             <TouchableOpacity style={styles.chevButton} onPress={nextMonth}>
-              <ChevronRight size={20} color={Colors.textDark} />
+              <ChevronRight size={18} color={Colors.textDark} />
             </TouchableOpacity>
           </View>
 
+          {/* Day labels */}
           <View style={styles.weekDaysRow}>
-            {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((d) => (
-              <Text key={d} style={styles.weekDay}>
+            {DAYS.map((d, i) => (
+              <Text key={i} style={styles.weekDay}>
                 {d}
               </Text>
             ))}
           </View>
 
+          {/* Dates */}
           <View style={styles.datesGrid}>
             {(() => {
               const year = currentMonth.getFullYear();
               const month = currentMonth.getMonth();
               const daysInMonth = new Date(year, month + 1, 0).getDate();
-              const firstDayOfMonth = new Date(year, month, 1).getDay();
-              const blanks = Array(firstDayOfMonth).fill(null);
+              const firstDay = new Date(year, month, 1).getDay();
+              const blanks = Array(firstDay).fill(null);
 
               return [...blanks, ...Array.from({ length: daysInMonth })].map(
                 (_, i) => {
-                  const day = i + 1 - firstDayOfMonth;
+                  const day = i + 1 - firstDay;
                   if (day <= 0 || day > daysInMonth) {
-                    return <View key={`blank-${i}`} style={styles.dateCell} />;
+                    return <View key={`b-${i}`} style={styles.dateCell} />;
                   }
-
                   const keyDate = `${year}-${month}-${day}`;
                   const isSelected = selectedDate === keyDate;
                   const isToday =
@@ -144,22 +153,31 @@ const AlertScreen = () => {
                     <Pressable
                       key={keyDate}
                       onPress={() => setSelectedDate(keyDate)}
-                      style={[
-                        styles.dateCell,
-                        isSelected && styles.dateCellSelected,
-                      ]}
+                      style={styles.dateCell}
                     >
-                      <Text
-                        style={[
-                          styles.dateText,
-                          isSelected && styles.dateTextSelected,
-                          isToday && !isSelected && styles.todayText,
-                        ]}
-                      >
-                        {day}
-                      </Text>
-                      {isToday && !isSelected && (
-                        <View style={styles.todayDot} />
+                      {isSelected ? (
+                        <LinearGradient
+                          colors={["#4A56C8", "#1C2478"]}
+                          style={styles.dateCellSelectedGrad}
+                        >
+                          <Text style={styles.dateTextSelected}>{day}</Text>
+                        </LinearGradient>
+                      ) : (
+                        <View
+                          style={[
+                            styles.dateCellInner,
+                            isToday && styles.dateCellToday,
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.dateText,
+                              isToday && styles.todayText,
+                            ]}
+                          >
+                            {day}
+                          </Text>
+                        </View>
                       )}
                     </Pressable>
                   );
@@ -168,106 +186,119 @@ const AlertScreen = () => {
             })()}
           </View>
 
+          {/* Selected date row */}
           <View style={styles.selectedInfo}>
-            <Text style={styles.selectedLabel}>Selected Date</Text>
+            <Text style={styles.selectedLabel}>Selected</Text>
             <Text style={styles.selectedValue}>{formatSelectedDate()}</Text>
           </View>
-
-          <View style={styles.timeRow}>
-            <View style={styles.timeGroup}>
-              <Text style={styles.timeLabel}>
-                <Clock size={12} color={Colors.textMuted} /> Time
-              </Text>
-              <TouchableOpacity
-                style={styles.timeDisplay}
-                onPress={() => setShowTimePicker(true)}
-              >
-                <ClockIcon size={18} color={Colors.primary} />
-                <Text style={styles.timeDisplayText}>{formatTime()}</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.amPmGroup}>
-              <Text style={styles.timeLabel}>Period</Text>
-              <View style={styles.amPmRow}>
-                <Pressable
-                  style={[
-                    styles.amPmBtn,
-                    dateTime.getHours() < 12 && styles.amPmBtnActive,
-                  ]}
-                  onPress={() => {
-                    setDateTime((d) => {
-                      const nd = new Date(d);
-                      if (nd.getHours() >= 12) nd.setHours(nd.getHours() - 12);
-                      return nd;
-                    });
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.amPmText,
-                      dateTime.getHours() < 12 && styles.amPmTextActive,
-                    ]}
-                  >
-                    AM
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    styles.amPmBtn,
-                    dateTime.getHours() >= 12 && styles.amPmBtnActive,
-                  ]}
-                  onPress={() => {
-                    setDateTime((d) => {
-                      const nd = new Date(d);
-                      if (nd.getHours() < 12) nd.setHours(nd.getHours() + 12);
-                      return nd;
-                    });
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.amPmText,
-                      dateTime.getHours() >= 12 && styles.amPmTextActive,
-                    ]}
-                  >
-                    PM
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          </View>
         </View>
 
-        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>
-          <BellRing size={14} color={Colors.textMuted} /> REMINDER OPTIONS
-        </Text>
+        {/* ── TIME PICKER ── */}
+        <View style={styles.timeCard}>
+          <View style={styles.timeLeft}>
+            <View style={styles.timeIconWrap}>
+              <Clock size={16} color={Colors.primary} />
+            </View>
+            <View>
+              <Text style={styles.timeCardLabel}>REMINDER TIME</Text>
+              <Text style={styles.timeCardValue}>{formatTime()}</Text>
+            </View>
+          </View>
 
-        <View style={styles.optionsWrapper}>
-          <View style={styles.optionsRow}>
-            {reminderOptions.map((opt) => (
-              <Pressable
-                key={opt}
-                onPress={() => setSelectedOption(opt)}
+          <View style={styles.amPmRow}>
+            <Pressable
+              style={[
+                styles.amPmBtn,
+                dateTime.getHours() < 12 && styles.amPmBtnActive,
+              ]}
+              onPress={() =>
+                setDateTime((d) => {
+                  const nd = new Date(d);
+                  if (nd.getHours() >= 12) nd.setHours(nd.getHours() - 12);
+                  return nd;
+                })
+              }
+            >
+              <Text
                 style={[
-                  styles.optionChip,
-                  selectedOption === opt && styles.optionChipActive,
+                  styles.amPmText,
+                  dateTime.getHours() < 12 && styles.amPmTextActive,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.optionText,
-                    selectedOption === opt && styles.optionTextActive,
-                  ]}
-                >
-                  {opt}
-                </Text>
-              </Pressable>
-            ))}
+                AM
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.amPmBtn,
+                dateTime.getHours() >= 12 && styles.amPmBtnActive,
+              ]}
+              onPress={() =>
+                setDateTime((d) => {
+                  const nd = new Date(d);
+                  if (nd.getHours() < 12) nd.setHours(nd.getHours() + 12);
+                  return nd;
+                })
+              }
+            >
+              <Text
+                style={[
+                  styles.amPmText,
+                  dateTime.getHours() >= 12 && styles.amPmTextActive,
+                ]}
+              >
+                PM
+              </Text>
+            </Pressable>
           </View>
+
+          <TouchableOpacity
+            style={styles.editTimeBtn}
+            onPress={() => setShowTimePicker(true)}
+          >
+            <Text style={styles.editTimeBtnText}>Edit</Text>
+          </TouchableOpacity>
         </View>
 
+        {/* ── REMINDER OPTIONS ── */}
+        <View style={styles.sectionHeader}>
+          <BellRing size={14} color={Colors.textMuted} />
+          <Text style={styles.sectionTitle}>REMIND ME</Text>
+        </View>
+
+        <View style={styles.optionsRow}>
+          {reminderOptions.map((opt) => {
+            const active = selectedOption === opt.value;
+            return (
+              <Pressable
+                key={opt.value}
+                onPress={() => setSelectedOption(opt.value)}
+                style={styles.optionCell}
+              >
+                {active ? (
+                  <LinearGradient
+                    colors={["#4A56C8", "#1C2478"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.optionChipActive}
+                  >
+                    <Text style={styles.optionTextActive}>{opt.label}</Text>
+                  </LinearGradient>
+                ) : (
+                  <View style={styles.optionChip}>
+                    <Text style={styles.optionText}>{opt.label}</Text>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {/* ── PUSH NOTIFICATIONS ── */}
         <View style={styles.pushRow}>
+          <View style={styles.pushIconWrap}>
+            <Bell size={16} color={Colors.primary} />
+          </View>
           <View style={styles.pushTextWrap}>
             <Text style={styles.pushTitle}>Push Notifications</Text>
             <Text style={styles.pushSubtitle}>
@@ -277,37 +308,64 @@ const AlertScreen = () => {
           <Switch
             value={pushEnabled}
             onValueChange={setPushEnabled}
-            thumbColor={pushEnabled ? Colors.white : undefined}
+            thumbColor={Colors.white}
             trackColor={{ true: Colors.primary, false: Colors.borderLight }}
             ios_backgroundColor={Colors.borderLight}
           />
         </View>
 
+        {/* ── SUMMARY ── */}
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>Reminder Summary</Text>
+          <Text style={styles.summaryTitle}>Summary</Text>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Date & Time</Text>
             <Text style={styles.summaryValue}>
-              {formatSelectedDate()} at {formatTime()}
+              {formatSelectedDate()} · {formatTime()}
             </Text>
           </View>
+          <View style={styles.summaryDivider} />
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Reminder</Text>
+            <Text style={styles.summaryLabel}>Advance Notice</Text>
             <Text style={styles.summaryValue}>{selectedOption}</Text>
           </View>
+          <View style={styles.summaryDivider} />
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Notifications</Text>
-            <Text style={styles.summaryValue}>
-              {pushEnabled ? "Enabled" : "Disabled"}
-            </Text>
+            <View
+              style={[
+                styles.statusBadge,
+                {
+                  backgroundColor: pushEnabled
+                    ? Colors.successLight
+                    : Colors.errorLight,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusBadgeText,
+                  { color: pushEnabled ? Colors.success : Colors.error },
+                ]}
+              >
+                {pushEnabled ? "Enabled" : "Disabled"}
+              </Text>
+            </View>
           </View>
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 96 }} />
 
-        <TouchableOpacity style={styles.saveBtn} onPress={() => {}}>
-          <Save size={20} color={Colors.white} />
-          <Text style={styles.saveBtnText}>Save Reminder</Text>
+        {/* ── SAVE BUTTON ── */}
+        <TouchableOpacity style={styles.saveBtnWrap} onPress={() => {}}>
+          <LinearGradient
+            colors={["#4A56C8", "#1C2478"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.saveBtn}
+          >
+            <Save size={18} color={Colors.white} />
+            <Text style={styles.saveBtnText}>Save Reminder</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </ScrollView>
 
@@ -331,43 +389,70 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+
   scroll: {
     padding: 20,
+    paddingTop: 12,
   },
 
+  /* ─── HEADER ─── */
   headerSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
     marginBottom: 24,
     marginTop: 8,
   },
-  header: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: Colors.textDark,
-    marginTop: 12,
-    marginBottom: 4,
+
+  headerIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
+
+  headerText: {
+    gap: 3,
+  },
+
+  header: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: Colors.textDark,
+    letterSpacing: -0.4,
+  },
+
   headerSubtext: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.textLight,
+    fontWeight: "500",
+  },
+
+  /* ─── SECTION LABEL ─── */
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 12,
+    marginTop: 20,
   },
 
   sectionTitle: {
     color: Colors.textMuted,
-    fontSize: 12,
-    fontWeight: "600",
-    marginBottom: 12,
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.8,
   },
 
+  /* ─── CALENDAR CARD ─── */
   calendarCard: {
     backgroundColor: Colors.surface,
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 20,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginBottom: 12,
   },
 
   monthRow: {
@@ -376,269 +461,359 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
+
   monthText: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 17,
+    fontWeight: "800",
     color: Colors.textDark,
+    letterSpacing: -0.3,
   },
+
+  monthYear: {
+    fontWeight: "500",
+    color: Colors.textLight,
+  },
+
   chevButton: {
-    padding: 8,
-    borderRadius: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     backgroundColor: Colors.borderLight,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  chevText: { color: Colors.textMuted },
 
   weekDaysRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 8,
   },
+
   weekDay: {
-    color: Colors.textLight,
+    color: Colors.textMuted,
     fontSize: 11,
-    fontWeight: "600",
-    width: 40,
+    fontWeight: "700",
+    width: "14.28%",
     textAlign: "center",
+    letterSpacing: 0.3,
   },
 
   datesGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "flex-start",
     marginBottom: 16,
   },
+
   dateCell: {
     width: "14.28%",
     aspectRatio: 1,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 20,
+    padding: 2,
   },
-  dateCellSelected: {
-    backgroundColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+
+  dateCellInner: {
+    width: "100%",
+    aspectRatio: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 100,
   },
+
+  dateCellToday: {
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+  },
+
+  dateCellSelectedGrad: {
+    width: "100%",
+    aspectRatio: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 100,
+  },
+
   dateText: {
     color: Colors.textDark,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "500",
   },
+
   dateTextSelected: {
     color: Colors.white,
+    fontSize: 13,
     fontWeight: "700",
   },
+
   todayText: {
     color: Colors.primary,
     fontWeight: "700",
-  },
-  todayDot: {
-    position: "absolute",
-    bottom: 2,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.primary,
   },
 
   selectedInfo: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingTop: 12,
-    marginTop: 8,
+    paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: Colors.borderLight,
   },
+
   selectedLabel: {
     fontSize: 12,
-    color: Colors.textLight,
-  },
-  selectedValue: {
-    fontSize: 14,
+    color: Colors.textMuted,
     fontWeight: "600",
+  },
+
+  selectedValue: {
+    fontSize: 13,
+    fontWeight: "700",
     color: Colors.primary,
   },
 
-  timeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 16,
-    alignItems: "center",
-  },
-  timeGroup: {
-    flex: 1,
-    marginRight: 12,
-  },
-  timeLabel: {
-    color: Colors.textMuted,
-    fontSize: 12,
-    marginBottom: 8,
+  /* ─── TIME CARD ─── */
+  timeCard: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  timeDisplay: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.borderLight,
-    padding: 12,
-    borderRadius: 12,
-    gap: 8,
-  },
-  timeDisplayText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: Colors.textDark,
+    backgroundColor: Colors.surface,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 12,
   },
 
-  amPmGroup: {
-    width: 120,
+  timeLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
+
+  timeIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    backgroundColor: "#EEF0FD",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  timeCardLabel: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    marginBottom: 2,
+  },
+
+  timeCardValue: {
+    color: Colors.textDark,
+    fontSize: 17,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+  },
+
   amPmRow: {
     flexDirection: "row",
     backgroundColor: Colors.borderLight,
-    padding: 4,
-    borderRadius: 12,
-    gap: 4,
+    padding: 3,
+    borderRadius: 10,
+    gap: 3,
   },
+
   amPmBtn: {
-    flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
     borderRadius: 8,
     alignItems: "center",
   },
+
   amPmBtnActive: {
     backgroundColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
   },
+
   amPmText: {
     color: Colors.textMid,
     fontWeight: "600",
-    fontSize: 14,
+    fontSize: 12,
   },
+
   amPmTextActive: {
     color: Colors.white,
   },
 
-  optionsWrapper: {
-    marginBottom: 8,
+  editTimeBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
   },
+
+  editTimeBtnText: {
+    color: Colors.primary,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  /* ─── OPTIONS ─── */
   optionsRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
   },
+
+  optionCell: {
+    flex: 1,
+  },
+
   optionChip: {
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 24,
-    borderWidth: 1,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
+    alignItems: "center",
   },
+
   optionChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
+    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: "center",
   },
+
   optionText: {
     color: Colors.textMid,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  optionTextActive: {
-    color: Colors.white,
+    fontSize: 12,
     fontWeight: "600",
   },
 
+  optionTextActive: {
+    color: Colors.white,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  /* ─── PUSH ROW ─── */
   pushRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     backgroundColor: Colors.surface,
-    padding: 16,
-    borderRadius: 16,
-    marginTop: 24,
-    shadowColor: Colors.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 2,
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginTop: 20,
+    gap: 12,
   },
+
+  pushIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    backgroundColor: "#EEF0FD",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   pushTextWrap: {
     flex: 1,
-    paddingRight: 16,
   },
+
   pushTitle: {
     color: Colors.textDark,
     fontWeight: "700",
-    fontSize: 15,
-    marginBottom: 4,
+    fontSize: 14,
+    marginBottom: 2,
   },
+
   pushSubtitle: {
     color: Colors.textLight,
     fontSize: 12,
   },
 
+  /* ─── SUMMARY ─── */
   summaryCard: {
-    marginTop: 24,
+    marginTop: 16,
     padding: 16,
     backgroundColor: Colors.surface,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: Colors.border,
   },
+
   summaryTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
     color: Colors.textDark,
     marginBottom: 12,
+    letterSpacing: 0.1,
   },
+
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 8,
   },
-  summaryLabel: {
-    fontSize: 13,
-    color: Colors.textLight,
-  },
-  summaryValue: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.textDark,
+
+  summaryDivider: {
+    height: 1,
+    backgroundColor: Colors.borderLight,
   },
 
-  saveBtn: {
+  summaryLabel: {
+    fontSize: 12,
+    color: Colors.textLight,
+    fontWeight: "500",
+  },
+
+  summaryValue: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.textDark,
+    maxWidth: "55%",
+    textAlign: "right",
+  },
+
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+
+  statusBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  /* ─── SAVE BUTTON ─── */
+  saveBtnWrap: {
     position: "absolute",
     left: 20,
     right: 20,
     bottom: 20,
-    backgroundColor: Colors.primary,
-    borderRadius: 30,
-    paddingVertical: 16,
+    borderRadius: 18,
+    overflow: "hidden",
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+
+  saveBtn: {
+    paddingVertical: 17,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
     gap: 10,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 6,
   },
+
   saveBtnText: {
     color: Colors.white,
     fontWeight: "700",
     fontSize: 16,
+    letterSpacing: 0.1,
   },
 });

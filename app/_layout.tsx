@@ -1,17 +1,34 @@
-import { Stack } from "expo-router";
-import Colors from "../constants/Colors";
+import { supabase } from "@/lib/supabase";
+import { store } from "@/store";
+import { setSession } from "@/store/authSlice";
+import { Slot } from "expo-router";
+import React, { useEffect } from "react";
+import { Provider, useDispatch } from "react-redux";
 
-export default function AuthLayout() {
+function AuthBootstrap() {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      dispatch(setSession(data.session));
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        dispatch(setSession(session));
+      },
+    );
+
+    return () => listener.subscription.unsubscribe();
+  }, [dispatch]);
+
+  return <Slot />;
+}
+
+export default function RootLayout() {
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: Colors.background },
-        animation: "fade",
-      }}
-    >
-      <Stack.Screen name="sign-in" />
-      <Stack.Screen name="sign-up" />
-    </Stack>
+    <Provider store={store}>
+      <AuthBootstrap />
+    </Provider>
   );
 }

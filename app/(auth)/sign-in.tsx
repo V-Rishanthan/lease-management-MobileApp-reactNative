@@ -1,9 +1,11 @@
+import { supabase } from "@/lib/supabase";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -37,306 +39,319 @@ export default function SignInScreen() {
     }).start();
   };
 
-  const emailBorder = emailFocus.interpolate({
-    inputRange: [0, 1],
-    outputRange: [Colors.border, Colors.primary],
-  });
+  const interpolateBorder = (anim: Animated.Value) =>
+    anim.interpolate({
+      inputRange: [0, 1],
+      outputRange: [Colors.border, Colors.primary],
+    });
 
-  const passBorder = passFocus.interpolate({
-    inputRange: [0, 1],
-    outputRange: [Colors.border, Colors.primary],
-  });
-
-  const onSignIn = () => {
+  const onSignIn = async () => {
     if (!email || !password) {
       setError("Please fill in all fields.");
       return;
     }
 
-    setLoading(true);
-    setError("");
+    try {
+      setLoading(true);
+      setError("");
 
-    // Simulate API call — replace with your real auth logic
-    setTimeout(() => {
+      const { data, error: authError } = await supabase.auth.signInWithPassword(
+        {
+          email: email.trim(),
+          password,
+        },
+      );
+
+      if (authError) throw authError;
+
+      if (data.session) {
+        router.replace("/(tabs)/home");
+      }
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
       setLoading(false);
-      router.replace("/(tabs)/home");
-    }, 1500);
+    }
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.root}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.background} />
+    <View style={styles.root}>
+      {/* <StatusBar barStyle="light-content" /> */}
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor="transparent"
+        translucent
+      />
 
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+      {/* HEADER SECTION */}
+      <View style={styles.headerBg}>
+        <LinearGradient
+          colors={["#4A56C8", "#1C2478", "#0F1460"]}
+          style={styles.overlay}
+        >
+          <View style={styles.logoContainer}>
+            <Text style={styles.logoText}>LEASEPAY</Text>
+            <View style={styles.yellowBar} />
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* FORM CARD */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.content}
       >
-        {/* Logo */}
-        <View style={styles.logoWrap}>
-          <Image
-            source={require("../../assets/images/LeaseTrack.png")}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>
-            Sign in to your account to continue
-          </Text>
-        </View>
-
-        {/* Form */}
-        <View style={styles.form}>
-          {/* Email */}
-          <View style={styles.fieldWrap}>
-            <Text style={styles.label}>Email Address</Text>
-            <Animated.View
-              style={[styles.inputWrap, { borderColor: emailBorder }]}
-            >
-              <TextInput
-                style={styles.input}
-                placeholder="you@example.com"
-                placeholderTextColor={Colors.textMuted}
-                value={email}
-                onChangeText={(t) => {
-                  setEmail(t);
-                  setError("");
-                }}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoComplete="email"
-                onFocus={() => animateFocus(emailFocus, 1)}
-                onBlur={() => animateFocus(emailFocus, 0)}
-              />
-            </Animated.View>
-          </View>
-
-          {/* Password */}
-          <View style={styles.fieldWrap}>
-            <Text style={styles.label}>Password</Text>
-            <Animated.View
-              style={[styles.inputWrap, { borderColor: passBorder }]}
-            >
-              <TextInput
-                style={[styles.input, { flex: 1 }]}
-                placeholder="Enter your password"
-                placeholderTextColor={Colors.textMuted}
-                value={password}
-                onChangeText={(t) => {
-                  setPassword(t);
-                  setError("");
-                }}
-                secureTextEntry={!showPassword}
-                autoComplete="password"
-                onFocus={() => animateFocus(passFocus, 1)}
-                onBlur={() => animateFocus(passFocus, 0)}
-              />
-              <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeBtn}
-              >
-                <Text style={styles.eyeText}>{showPassword ? "🙈" : "👁"}</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
-
-          {/* Forgot password */}
-          <TouchableOpacity style={styles.forgotWrap}>
-            <Text style={styles.forgotText}>Forgot password?</Text>
-          </TouchableOpacity>
-
-          {/* Error */}
-          {error !== "" && (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>⚠ {error}</Text>
-            </View>
-          )}
-
-          {/* Sign In button */}
-          <TouchableOpacity
-            style={[styles.btnPrimary, loading && styles.btnDisabled]}
-            onPress={onSignIn}
-            disabled={loading}
-            activeOpacity={0.85}
+        <View style={styles.card}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
           >
-            {loading ? (
-              <ActivityIndicator color={Colors.white} size="small" />
-            ) : (
-              <Text style={styles.btnPrimaryText}>Sign In</Text>
+            <Text style={styles.welcomeText}>WELCOME BACK</Text>
+            <Text style={styles.instructionText}>
+              Login to your existent account of auditions
+            </Text>
+
+            {/* Email Field */}
+            <View style={styles.inputGap}>
+              <View style={styles.labelWrapper}>
+                <Text style={styles.floatingLabel}>Email Address</Text>
+              </View>
+              <Animated.View
+                style={[
+                  styles.inputBox,
+                  { borderColor: interpolateBorder(emailFocus) },
+                ]}
+              >
+                <TextInput
+                  style={styles.textInput}
+                  value={email}
+                  onChangeText={(t) => {
+                    setEmail(t);
+                    setError("");
+                  }}
+                  placeholder="johndoe23@gmail.com"
+                  placeholderTextColor={Colors.textMuted}
+                  autoCapitalize="none"
+                  onFocus={() => animateFocus(emailFocus, 1)}
+                  onBlur={() => animateFocus(emailFocus, 0)}
+                />
+              </Animated.View>
+            </View>
+
+            {/* Password Field */}
+            <View style={styles.inputGap}>
+              <Animated.View
+                style={[
+                  styles.inputBox,
+                  { borderColor: interpolateBorder(passFocus) },
+                ]}
+              >
+                <TextInput
+                  style={styles.textInput}
+                  value={password}
+                  onChangeText={(t) => {
+                    setPassword(t);
+                    setError("");
+                  }}
+                  secureTextEntry={!showPassword}
+                  placeholder="********"
+                  placeholderTextColor={Colors.textMuted}
+                  onFocus={() => animateFocus(passFocus, 1)}
+                  onBlur={() => animateFocus(passFocus, 0)}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Ionicons
+                    name={showPassword ? "eye-outline" : "eye-off-outline"}
+                    size={20}
+                    color={Colors.textMid}
+                  />
+                </TouchableOpacity>
+              </Animated.View>
+            </View>
+
+            {/* Remember Me & Forgot Password */}
+            <View style={styles.helperRow}>
+              <View style={styles.checkboxArea}>
+                <View style={styles.checkbox} />
+                <Text style={styles.helperText}>Remember Me</Text>
+              </View>
+              <TouchableOpacity>
+                <Text style={styles.helperText}>Forgot Password?</Text>
+              </TouchableOpacity>
+            </View>
+
+            {error !== "" && (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>⚠ {error}</Text>
+              </View>
             )}
-          </TouchableOpacity>
 
-          {/* Divider */}
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
-          </View>
+            {/* Login Button */}
+            <TouchableOpacity
+              onPress={onSignIn}
+              activeOpacity={0.8}
+              disabled={loading}
+            >
+              <LinearGradient
+                colors={["#4A56C8", "#1C2478", "#0F1460"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.mainButton}
+              >
+                {loading ? (
+                  <ActivityIndicator color={Colors.white} />
+                ) : (
+                  <Text style={styles.buttonText}>Log in</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
 
-          {/* Sign Up link */}
-          <View style={styles.bottomRow}>
-            <Text style={styles.bottomPrompt}>Don't have an account? </Text>
-            <Pressable onPress={() => router.push("/(auth)/sign-up")}>
-              <Text style={styles.bottomLink}>Sign Up</Text>
-            </Pressable>
-          </View>
+            <View style={styles.dividerArea}>
+              <View style={styles.line} />
+              <Text style={styles.dividerText}>Login With</Text>
+              <View style={styles.line} />
+            </View>
+          </ScrollView>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>Don't have an account? </Text>
+          <Pressable onPress={() => router.push("/(auth)/sign-up")}>
+            <Text style={styles.signUpLink}>Sign Up</Text>
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
+  root: { flex: 1, backgroundColor: Colors.white },
+  headerBg: { width: "100%", height: 350 },
+  overlay: {
     flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: 28,
-    paddingBottom: 40,
-  },
-
-  logoWrap: {
+    justifyContent: "center",
     alignItems: "center",
-    marginTop: 64,
-    marginBottom: 36,
+    paddingBottom: 50,
   },
-  logo: {
-    width: 180,
-    height: 56,
+  logoContainer: { alignItems: "center" },
+  logoText: {
+    color: Colors.white,
+    fontSize: 38,
+    fontWeight: "900",
+    letterSpacing: 3,
   },
-
-  header: {
-    marginBottom: 32,
+  yellowBar: {
+    width: 90,
+    height: 6,
+    backgroundColor: "#F2C94C",
+    marginTop: 8,
+    alignSelf: "flex-start",
   },
-  title: {
-    fontSize: 26,
+  content: { flex: 1, marginTop: -80 },
+  card: {
+    flex: 1,
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 60,
+    paddingHorizontal: 35,
+    paddingTop: 45,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  scrollContent: { paddingBottom: 30 },
+  welcomeText: {
+    fontSize: 24,
     fontWeight: "800",
-    color: Colors.textDark,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: Colors.textLight,
-    lineHeight: 20,
-  },
-
-  form: {
-    gap: 4,
-  },
-  fieldWrap: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.textMid,
+    color: Colors.primary,
     marginBottom: 8,
   },
-  inputWrap: {
-    flexDirection: "row",
-    alignItems: "center",
+  instructionText: {
+    fontSize: 14,
+    color: Colors.textMid,
+    lineHeight: 20,
+    marginBottom: 35,
+    maxWidth: "80%",
+  },
+  inputGap: { marginBottom: 20 },
+  labelWrapper: {
+    position: "absolute",
+    top: -10,
+    left: 15,
     backgroundColor: Colors.white,
+    paddingHorizontal: 5,
+    zIndex: 2,
+  },
+  floatingLabel: { fontSize: 11, color: Colors.primary, fontWeight: "600" },
+  inputBox: {
+    height: 55,
     borderWidth: 1.5,
     borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 52,
+    paddingHorizontal: 15,
+    flexDirection: "row",
+    alignItems: "center",
   },
-  input: {
-    flex: 1,
-    fontSize: 15,
-    color: Colors.textDark,
+  textInput: { flex: 1, fontSize: 14, color: Colors.textDark },
+  helperRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 30,
   },
-  eyeBtn: {
-    paddingLeft: 10,
+  checkboxArea: { flexDirection: "row", alignItems: "center" },
+  checkbox: {
+    width: 16,
+    height: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 4,
+    marginRight: 8,
   },
-  eyeText: {
-    fontSize: 16,
-  },
-
-  forgotWrap: {
-    alignSelf: "flex-end",
-    marginTop: -8,
-    marginBottom: 24,
-  },
-  forgotText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.primaryFade,
-  },
-
+  helperText: { fontSize: 11, color: Colors.textLight },
   errorBox: {
     backgroundColor: Colors.errorLight,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
   },
-  errorText: {
-    fontSize: 13,
-    fontWeight: "500",
-    color: Colors.error,
-  },
-
-  btnPrimary: {
-    backgroundColor: Colors.primary,
-    borderRadius: 14,
-    height: 54,
-    alignItems: "center",
+  errorText: { color: Colors.error, fontSize: 12, fontWeight: "600" },
+  mainButton: {
+    height: 55,
+    borderRadius: 30,
     justifyContent: "center",
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.28,
-    shadowRadius: 12,
-    elevation: 6,
+    alignItems: "center",
+    elevation: 4,
   },
-  btnDisabled: {
-    opacity: 0.7,
-  },
-  btnPrimaryText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-  },
-
-  dividerRow: {
+  buttonText: { color: Colors.white, fontSize: 18, fontWeight: "bold" },
+  dividerArea: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 24,
-    gap: 12,
+    marginVertical: 25,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.border,
-  },
-  dividerText: {
-    fontSize: 13,
-    color: Colors.textMuted,
-    fontWeight: "500",
-  },
-
-  bottomRow: {
+  line: { flex: 1, height: 1, backgroundColor: Colors.borderLight },
+  dividerText: { marginHorizontal: 15, fontSize: 12, color: Colors.textLight },
+  fbButton: {
+    height: 48,
+    backgroundColor: "#3b5998",
+    borderRadius: 25,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    gap: 10,
   },
-  bottomPrompt: {
-    fontSize: 14,
-    color: Colors.textLight,
+  fbText: { color: Colors.white, fontWeight: "700", fontSize: 14 },
+  footer: {
+    backgroundColor: Colors.white,
+    paddingVertical: 20,
+    flexDirection: "row",
+    justifyContent: "center",
   },
-  bottomLink: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: Colors.primary,
-  },
+  footerText: { color: Colors.textMid, fontSize: 13 },
+  signUpLink: { color: Colors.primary, fontWeight: "bold", fontSize: 13 },
 });

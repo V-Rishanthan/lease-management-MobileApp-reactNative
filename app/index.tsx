@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import Colors from "../constants/Colors";
+import { supabase } from "../lib/supabase";
 
 export default function LandingScreen() {
   const router = useRouter();
@@ -61,9 +62,14 @@ export default function LandingScreen() {
       ]),
     ]).start();
 
-    // ── Step 2: Navigate to Sign In after 3 seconds ──
-    const timer = setTimeout(() => {
-      router.replace("/(auth)/sign-in");
+    // ── Step 2: Navigate based on auth state after 3 seconds ──
+    const timer = setTimeout(async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        router.replace("/(tabs)/home");
+      } else {
+        router.replace("/(auth)/sign-in");
+      }
     }, 3000);
 
     // Cleanup timer if screen unmounts early

@@ -33,6 +33,16 @@ const Colors = {
 
   // icons
   walletIcon: "#22C55E",
+
+  // ── Receipt screen additions ──────────────────────────
+  primarySoft: "#EEF0FB",   // indigo tint for icon boxes, dashed border bg
+  primaryMid: "#C5CAF0",   // dashed border stroke, input border accent
+  offWhite: "#F7F8FC",   // input / textarea background
+  slate: "#64748B",   // secondary label text
+  slateLight: "#94A3B8",   // placeholder text, muted chevrons
+  warnBg: "#FFFBEB",   // size badge warning background
+  warn: "#D97706",   // size badge warning text
+
 };
 
 export default Colors;
