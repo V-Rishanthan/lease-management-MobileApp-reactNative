@@ -150,17 +150,17 @@ export default function addExpenses() {
       const formattedDate = `${yearNum}-${monthNum}-${dayNum}`;
 
       const payload = {
-        vehicle_id: vehicleData.id,
-        user_id: user.user.id,
+        vehicle_info_id: vehicleData.id,
+        id: user.user.id,
         expense_name: name.trim(),
         category: selectedCategory,
-        amount: priceNum,
+        price: priceNum,
         date: formattedDate,
         created_at: new Date().toISOString(),
       };
 
       const { data: expenseData, error: expenseError } = await supabase
-        .from("expenses")
+        .from("expense")
         .insert([payload])
         .select();
 

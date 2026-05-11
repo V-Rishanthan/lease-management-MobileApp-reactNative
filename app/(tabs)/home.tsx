@@ -82,7 +82,9 @@ export default function Home() {
   });
 
   useEffect(() => {
-    dispatch(fetchVehicleInfo());
+    if (!vehicleInfo) {
+      dispatch(fetchVehicleInfo());
+    }
   }, [dispatch]);
 
   useEffect(() => {
@@ -130,7 +132,7 @@ export default function Home() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  if (loading) {
+  if (loading && !vehicleInfo) {
     return (
       <SafeAreaView
         style={[s.safe, { justifyContent: "center", alignItems: "center" }]}

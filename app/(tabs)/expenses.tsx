@@ -1,25 +1,31 @@
 import Colors from "@/constants/Colors";
+import { supabase } from "@/lib/supabase";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
   Calendar,
   Car,
-  Coffee,
   CreditCard,
+  DollarSign,
   Edit2,
-  Home,
+  Fuel,
   Plus,
   Search,
+  Shield,
   ShoppingBag,
+  Tag,
   Trash2,
-  TrendingUp,
-  Wallet
+  Wallet,
+  Wrench,
+  X,
 } from "lucide-react-native";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Dimensions,
   FlatList,
+  Modal,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -35,44 +41,485 @@ import {
 
 const { width } = Dimensions.get("window");
 
-const expensesData = [
-  { id: "1", title: "Groceries", amount: 4500, date: "2026-03-01", category: "Food", icon: "ShoppingBag" },
-  { id: "2", title: "Utilities", amount: 12000, date: "2026-03-03", category: "Bills", icon: "Home" },
-  { id: "3", title: "Rent", amount: 75000, date: "2026-03-05", category: "Housing", icon: "Home" },
-  { id: "4", title: "Transport", amount: 3000, date: "2026-03-07", category: "Travel", icon: "Car" },
-  { id: "5", title: "Coffee", amount: 1500, date: "2026-03-10", category: "Food", icon: "Coffee" },
-];
+type ExpenseItem = {
+  id: string;
+  title: string;
+  amount: number;
+  date: string;
+  category: string;
+};
 
 // Category accent colours — all derived from the existing palette
 const CATEGORY_META: Record<string, { bg: string; text: string; dot: string }> = {
-  Food: { bg: `${Colors.success}15`, text: Colors.success, dot: Colors.success },
-  Bills: { bg: `${Colors.accent}15`, text: Colors.accent, dot: Colors.accent },
-  Housing: { bg: `${Colors.primaryFade}15`, text: Colors.primaryFade, dot: Colors.primaryFade },
-  Travel: { bg: `${Colors.homeBox2}20`, text: Colors.homeBox2, dot: Colors.homeBox2 },
+  Fuel: { bg: `${Colors.accent}15`, text: Colors.accent, dot: Colors.accent },
+  Maintenance: { bg: `${Colors.primaryFade}15`, text: Colors.primaryFade, dot: Colors.primaryFade },
+  Repairs: { bg: `${Colors.homeBox2}20`, text: Colors.homeBox2, dot: Colors.homeBox2 },
+  "Driver Salary": { bg: `${Colors.success}15`, text: Colors.success, dot: Colors.success },
+  "Spare Parts": { bg: `${Colors.warn ?? Colors.accent}15`, text: Colors.warn ?? Colors.accent, dot: Colors.warn ?? Colors.accent },
+  Insurance: { bg: `${Colors.primaryLight ?? Colors.primary}15`, text: Colors.primaryLight ?? Colors.primary, dot: Colors.primaryLight ?? Colors.primary },
+  "Loan/Lease Payment": { bg: `${Colors.error}15`, text: Colors.error, dot: Colors.error },
+  Transport: { bg: `${Colors.homeBox2}20`, text: Colors.homeBox2, dot: Colors.homeBox2 },
   Other: { bg: `${Colors.textLight}15`, text: Colors.textLight, dot: Colors.textLight },
 };
 
 const getCategoryMeta = (cat: string) =>
   CATEGORY_META[cat] ?? CATEGORY_META["Other"];
 
-const getCategoryIcon = (iconName: string, color: string, size = 18) => {
+const getCategoryIcon = (category: string, color: string, size = 18) => {
   const props = { size, color };
-  switch (iconName) {
-    case "ShoppingBag": return <ShoppingBag {...props} />;
-    case "Home": return <Home {...props} />;
-    case "Car": return <Car {...props} />;
-    case "Coffee": return <Coffee {...props} />;
+  switch (category) {
+    case "Fuel": return <Fuel {...props} />;
+    case "Maintenance": return <Wrench {...props} />;
+    case "Repairs": return <Wrench {...props} />;
+    case "Driver Salary": return <CreditCard {...props} />;
+    case "Spare Parts": return <ShoppingBag {...props} />;
+    case "Insurance": return <Shield {...props} />;
+    case "Loan/Lease Payment": return <CreditCard {...props} />;
+    case "Transport": return <Car {...props} />;
     default: return <CreditCard {...props} />;
   }
 };
 
-const FILTERS = ["All", "Food", "Bills", "Housing", "Travel", "Other"];
+const FILTERS = ["All", "Fuel", "Maintenance", "Repairs", "Insurance", "Transport", "Other"];
+
+const CATEGORIES = [
+  "Fuel", "Maintenance", "Repairs", "Driver Salary", "Spare Parts",
+  "Insurance", "Loan/Lease Payment", "Transport", "Other",
+];
+
+// ── Detail Modal ──────────────────────────────────────────────────────────────
+function DetailModal({
+  item,
+  onClose,
+  onUpdate,
+  onDelete,
+}: {
+  item: ExpenseItem | null;
+  onClose: () => void;
+  onUpdate: (id: string, name: string, category: string, price: number) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editPrice, setEditPrice] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  React.useEffect(() => {
+    if (item) {
+      setEditName(item.title);
+      setEditCategory(item.category);
+      setEditPrice(item.amount.toString());
+      setIsEditing(false);
+    }
+  }, [item]);
+
+  if (!item) return null;
+
+  const meta = getCategoryMeta(item.category);
+
+  const formatDate = (ds: string) =>
+    new Date(ds).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
+
+  const handleSave = async () => {
+    if (!editName.trim()) {
+      Alert.alert("Validation", "Name cannot be empty.");
+      return;
+    }
+    const price = parseFloat(editPrice);
+    if (isNaN(price) || price <= 0) {
+      Alert.alert("Validation", "Enter a valid positive amount.");
+      return;
+    }
+    if (!editCategory.trim()) {
+      Alert.alert("Validation", "Category cannot be empty.");
+      return;
+    }
+    setSaving(true);
+    await onUpdate(item.id, editName.trim(), editCategory, price);
+    setSaving(false);
+    setIsEditing(false);
+  };
+
+  return (
+    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
+      <View style={dm.overlay}>
+        <View style={dm.sheet}>
+          <View style={dm.handle} />
+
+          {/* Hero strip */}
+          <LinearGradient
+            colors={[Colors.primaryFade, Colors.primary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={dm.heroStrip}
+          >
+            <View style={[dm.heroIcon, { backgroundColor: meta.bg }]}>
+              {getCategoryIcon(item.category, Colors.white, 22)}
+            </View>
+            <View style={dm.heroRight}>
+              <Text style={dm.heroName} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Text style={dm.heroSub}>
+                {isEditing ? "Editing record" : item.category}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={dm.closeBtn}
+              onPress={() => { setIsEditing(false); onClose(); }}
+            >
+              <X size={18} color={Colors.white} />
+            </TouchableOpacity>
+          </LinearGradient>
+
+          <ScrollView
+            contentContainerStyle={dm.body}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {isEditing ? (
+              /* ── Edit Form ── */
+              <View style={dm.editForm}>
+                <Text style={dm.editSectionTitle}>Edit Details</Text>
+
+                <View style={dm.fieldGroup}>
+                  <Text style={dm.label}>Expense Name</Text>
+                  <TextInput
+                    style={dm.input}
+                    value={editName}
+                    onChangeText={setEditName}
+                    placeholder="Enter name"
+                    placeholderTextColor={Colors.textMuted}
+                  />
+                </View>
+
+                <View style={dm.fieldGroup}>
+                  <Text style={dm.label}>Price (LKR)</Text>
+                  <TextInput
+                    style={dm.input}
+                    value={editPrice}
+                    onChangeText={setEditPrice}
+                    keyboardType="decimal-pad"
+                    placeholder="0.00"
+                    placeholderTextColor={Colors.textMuted}
+                  />
+                </View>
+
+                <View style={dm.fieldGroup}>
+                  <Text style={dm.label}>Category</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 4 }}>
+                    {CATEGORIES.map((cat) => {
+                      const active = editCategory === cat;
+                      return (
+                        <TouchableOpacity key={cat} onPress={() => setEditCategory(cat)}>
+                          {active ? (
+                            <LinearGradient
+                              colors={["#4A56C8", "#1C2478"]}
+                              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                              style={dm.catChipActive}
+                            >
+                              <Text style={dm.catChipTextActive}>{cat}</Text>
+                            </LinearGradient>
+                          ) : (
+                            <View style={dm.catChip}>
+                              <Text style={dm.catChipText}>{cat}</Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+
+                <View style={dm.actionRow}>
+                  <TouchableOpacity style={dm.cancelBtn} onPress={() => setIsEditing(false)}>
+                    <Text style={dm.cancelBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[dm.saveBtn, saving && { opacity: 0.6 }]}
+                    onPress={handleSave}
+                    disabled={saving}
+                  >
+                    <Text style={dm.saveBtnText}>
+                      {saving ? "Saving..." : "Save Changes"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              /* ── View Mode ── */
+              <>
+                {/* Amount card */}
+                <View style={dm.infoCard}>
+                  <View style={dm.infoRow}>
+                    <View style={[dm.infoIconBox, { backgroundColor: `${Colors.success}15` }]}>
+                      <DollarSign size={16} color={Colors.success} />
+                    </View>
+                    <View>
+                      <Text style={dm.infoLabel}>Amount</Text>
+                      <Text style={dm.infoVal}>LKR {item.amount.toLocaleString()}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Category card */}
+                <View style={dm.infoCard}>
+                  <View style={dm.infoRow}>
+                    <View style={[dm.infoIconBox, { backgroundColor: meta.bg }]}>
+                      <Tag size={16} color={meta.dot} />
+                    </View>
+                    <View>
+                      <Text style={dm.infoLabel}>Category</Text>
+                      <Text style={dm.infoVal}>{item.category}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Date card */}
+                <View style={dm.infoCard}>
+                  <View style={dm.infoRow}>
+                    <View style={[dm.infoIconBox, { backgroundColor: `${Colors.accent}15` }]}>
+                      <Calendar size={16} color={Colors.accent} />
+                    </View>
+                    <View>
+                      <Text style={dm.infoLabel}>Date</Text>
+                      <Text style={dm.infoVal}>{formatDate(item.date)}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Action buttons */}
+                <View style={dm.actionRow}>
+                  <TouchableOpacity style={dm.editBtn} onPress={() => setIsEditing(true)}>
+                    <Text style={dm.editBtnText}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={dm.deleteBtn}
+                    onPress={() => {
+                      Alert.alert(
+                        "Delete Expense",
+                        `Remove "${item.title}"?`,
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          {
+                            text: "Delete",
+                            style: "destructive",
+                            onPress: async () => {
+                              onClose();
+                              await onDelete(item.id);
+                            },
+                          },
+                        ]
+                      );
+                    }}
+                  >
+                    <Text style={dm.deleteBtnText}>Delete</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+// ── Detail Modal Styles ───────────────────────────────────────────────────────
+const dm = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
+  sheet: {
+    backgroundColor: Colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    maxHeight: "85%", overflow: "hidden",
+  },
+  handle: {
+    width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border,
+    alignSelf: "center", marginTop: 10, marginBottom: 6,
+  },
+  heroStrip: {
+    flexDirection: "row", alignItems: "center", padding: 18, gap: 14,
+  },
+  heroIcon: {
+    width: 48, height: 48, borderRadius: 14,
+    alignItems: "center", justifyContent: "center",
+  },
+  heroRight: { flex: 1 },
+  heroName: { color: Colors.white, fontSize: 18, fontWeight: "800" },
+  heroSub: { color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: "600", marginTop: 2 },
+  closeBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center", justifyContent: "center",
+  },
+  body: { padding: 18, paddingBottom: 40 },
+  infoCard: {
+    backgroundColor: Colors.surface, borderRadius: 16, padding: 16,
+    marginBottom: 10, borderWidth: 1, borderColor: Colors.borderLight,
+  },
+  infoRow: { flexDirection: "row", alignItems: "center", gap: 14 },
+  infoIconBox: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: "center", justifyContent: "center",
+  },
+  infoLabel: { fontSize: 11, color: Colors.textMuted, fontWeight: "600", marginBottom: 2 },
+  infoVal: { fontSize: 15, color: Colors.textDark, fontWeight: "700" },
+  editForm: { gap: 14 },
+  editSectionTitle: { fontSize: 16, fontWeight: "700", color: Colors.textDark, marginBottom: 4 },
+  fieldGroup: { gap: 6 },
+  label: { fontSize: 12, fontWeight: "600", color: Colors.textMuted },
+  input: {
+    backgroundColor: Colors.surface, borderRadius: 12, borderWidth: 1,
+    borderColor: Colors.border, paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 15, fontWeight: "600", color: Colors.textDark,
+  },
+  catChip: {
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
+    backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border,
+  },
+  catChipActive: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
+  catChipText: { fontSize: 12, fontWeight: "600", color: Colors.textMid },
+  catChipTextActive: { fontSize: 12, fontWeight: "600", color: Colors.white },
+  actionRow: { flexDirection: "row", gap: 12, marginTop: 18 },
+  editBtn: {
+    flex: 1, paddingVertical: 14, borderRadius: 14,
+    backgroundColor: `${Colors.primary}12`, alignItems: "center",
+  },
+  editBtnText: { color: Colors.primary, fontWeight: "700", fontSize: 15 },
+  deleteBtn: {
+    flex: 1, paddingVertical: 14, borderRadius: 14,
+    backgroundColor: Colors.errorLight, alignItems: "center",
+  },
+  deleteBtnText: { color: Colors.error, fontWeight: "700", fontSize: 15 },
+  cancelBtn: {
+    flex: 1, paddingVertical: 14, borderRadius: 14,
+    backgroundColor: Colors.borderLight, alignItems: "center",
+  },
+  cancelBtnText: { color: Colors.textMid, fontWeight: "700", fontSize: 15 },
+  saveBtn: {
+    flex: 1, paddingVertical: 14, borderRadius: 14,
+    backgroundColor: Colors.primary, alignItems: "center",
+  },
+  saveBtnText: { color: Colors.white, fontWeight: "700", fontSize: 15 },
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 const Expenses = () => {
   const [query, setQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All");
+  const [expensesData, setExpensesData] = useState<ExpenseItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selected, setSelected] = useState<ExpenseItem | null>(null);
   const router = useRouter();
+
+  // ── Fetch expenses from Supabase ─────────────────────────────────────────
+  const fetchExpenses = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: vehicleData } = await supabase
+        .from("vehicle_info")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (vehicleData) {
+        const { data, error } = await supabase
+          .from("expense")
+          .select("*")
+          .eq("vehicle_info_id", vehicleData.id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Fetch expense error:", error);
+          return;
+        }
+
+        if (data) {
+          const formatted: ExpenseItem[] = data.map((item: any) => ({
+            id: item.id,
+            title: item.expense_name || "Unknown",
+            amount: item.price || 0,
+            date: item.date || new Date().toISOString(),
+            category: item.category || "Other",
+          }));
+          setExpensesData(formatted);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching expenses:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchExpenses();
+    }, [])
+  );
+
+  // ── Update expense ──────────────────────────────────────────────────────
+  const handleUpdate = async (id: string, name: string, category: string, price: number) => {
+    try {
+      const { data, error } = await supabase
+        .from("expense")
+        .update({ expense_name: name, category, price })
+        .eq("id", id)
+        .select();
+
+      if (error) {
+        Alert.alert("Update Error", error.message);
+        return;
+      }
+      if (!data || data.length === 0) {
+        Alert.alert("Warning", "No records were updated.");
+        return;
+      }
+      // Refresh list & modal
+      setExpensesData((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, title: name, category, amount: price } : e))
+      );
+      setSelected((prev) =>
+        prev?.id === id ? { ...prev, title: name, category, amount: price } : prev
+      );
+    } catch (e: any) {
+      Alert.alert("Error", e.message ?? "Something went wrong.");
+    }
+  };
+
+  // ── Delete expense ───────────────────────────────────────────────────────
+  const handleDelete = (item: ExpenseItem) =>
+    Alert.alert("Delete Expense", `Remove "${item.title}"?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const { error } = await supabase
+              .from("expense")
+              .delete()
+              .eq("id", item.id);
+
+            if (error) {
+              Alert.alert("Error", error.message || "Failed to delete expense.");
+              return;
+            }
+            setExpensesData((prev) => prev.filter((e) => e.id !== item.id));
+          } catch (e: any) {
+            Alert.alert("Error", e.message ?? "Something went wrong.");
+          }
+        },
+      },
+    ]);
 
   const filtered = useMemo(() => {
     let d = expensesData.filter((e) =>
@@ -80,11 +527,11 @@ const Expenses = () => {
     );
     if (selectedFilter !== "All") d = d.filter((e) => e.category === selectedFilter);
     return d;
-  }, [query, selectedFilter]);
+  }, [query, selectedFilter, expensesData]);
 
   const total = expensesData.reduce((s, i) => s + i.amount, 0);
-  const highest = Math.max(...expensesData.map((e) => e.amount));
-  const avgVal = Math.round(total / expensesData.length);
+  const highest = expensesData.length > 0 ? Math.max(...expensesData.map((e) => e.amount)) : 0;
+  const avgVal = expensesData.length > 0 ? Math.round(total / expensesData.length) : 0;
 
   const formatDate = (ds: string) => {
     const d = new Date(ds);
@@ -118,28 +565,27 @@ const Expenses = () => {
     </LinearGradient>
   );
 
-  const handleDelete = (item: (typeof expensesData)[0]) =>
-    Alert.alert("Delete Expense", `Remove "${item.title}"?`, [
-      { text: "Cancel", style: "cancel" },
-      { text: "Delete", style: "destructive", onPress: () => console.log("delete", item.id) },
-    ]);
-
   // ── Expense Row ────────────────────────────────────────────────────────────
-  const renderItem = ({ item }: { item: (typeof expensesData)[0] }) => {
+  const renderItem = ({ item }: { item: ExpenseItem }) => {
     const meta = getCategoryMeta(item.category);
     return (
       <Swipeable
         renderLeftActions={renderLeftActions}
         renderRightActions={renderRightActions}
+        onSwipeableLeftOpen={() => setSelected(item)}
         onSwipeableRightOpen={() => handleDelete(item)}
       >
-        <TouchableOpacity style={s.row} activeOpacity={0.75}>
+        <TouchableOpacity
+          style={s.row}
+          activeOpacity={0.75}
+          onPress={() => setSelected(item)}
+        >
           {/* Left accent bar */}
           <View style={[s.rowAccent, { backgroundColor: meta.dot }]} />
 
           {/* Icon */}
           <View style={[s.rowIcon, { backgroundColor: meta.bg }]}>
-            {getCategoryIcon(item.icon, meta.dot)}
+            {getCategoryIcon(item.category, meta.dot)}
           </View>
 
           {/* Content */}
@@ -179,7 +625,7 @@ const Expenses = () => {
 
         <View style={s.heroTop}>
           <View>
-            <Text style={s.heroEyebrow}>March 2026</Text>
+            <Text style={s.heroEyebrow}>Expense Tracker</Text>
             <Text style={s.heroTitle}>My Expenses</Text>
           </View>
           <TouchableOpacity style={s.addBtn} onPress={() => router.push("/addExpenses")}>
@@ -198,10 +644,6 @@ const Expenses = () => {
           <View>
             <Text style={s.summaryLabel}>Total Spent</Text>
             <Text style={s.summaryValue}>LKR {total.toLocaleString()}</Text>
-          </View>
-          <View style={s.trendPill}>
-            <TrendingUp size={11} color={Colors.success} />
-            <Text style={[s.trendText, { color: Colors.success }]}>+12%</Text>
           </View>
         </View>
 
@@ -283,6 +725,14 @@ const Expenses = () => {
   );
 
   // ── Render ─────────────────────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <View style={[s.root, { justifyContent: "center", alignItems: "center" }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
@@ -297,6 +747,14 @@ const Expenses = () => {
           ListEmptyComponent={ListEmpty}
         />
       </View>
+
+      {/* ── Detail Modal ── */}
+      <DetailModal
+        item={selected}
+        onClose={() => setSelected(null)}
+        onUpdate={handleUpdate}
+        onDelete={handleDelete}
+      />
     </GestureHandlerRootView>
   );
 };
