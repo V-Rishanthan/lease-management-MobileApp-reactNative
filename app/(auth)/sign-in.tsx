@@ -2,10 +2,9 @@ import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Animated,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -27,23 +26,8 @@ export default function SignInScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const emailFocus = useRef(new Animated.Value(0)).current;
-  const passFocus = useRef(new Animated.Value(0)).current;
-
-  const animateFocus = (anim: Animated.Value, val: number) => {
-    Animated.timing(anim, {
-      toValue: val,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
-  };
-
-  const interpolateBorder = (anim: Animated.Value) =>
-    anim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [Colors.border, Colors.primary],
-    });
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passFocused, setPassFocused] = useState(false);
 
   const onSignIn = async () => {
     if (!email || !password) {
@@ -117,10 +101,12 @@ export default function SignInScreen() {
               <View style={styles.labelWrapper}>
                 <Text style={styles.floatingLabel}>Email Address</Text>
               </View>
-              <Animated.View
+              <View
                 style={[
                   styles.inputBox,
-                  { borderColor: interpolateBorder(emailFocus) },
+                  {
+                    borderColor: emailFocused ? Colors.primary : Colors.border,
+                  },
                 ]}
               >
                 <TextInput
@@ -133,18 +119,20 @@ export default function SignInScreen() {
                   placeholder="johndoe23@gmail.com"
                   placeholderTextColor={Colors.textMuted}
                   autoCapitalize="none"
-                  onFocus={() => animateFocus(emailFocus, 1)}
-                  onBlur={() => animateFocus(emailFocus, 0)}
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
                 />
-              </Animated.View>
+              </View>
             </View>
 
             {/* Password Field */}
             <View style={styles.inputGap}>
-              <Animated.View
+              <View
                 style={[
                   styles.inputBox,
-                  { borderColor: interpolateBorder(passFocus) },
+                  {
+                    borderColor: passFocused ? Colors.primary : Colors.border,
+                  },
                 ]}
               >
                 <TextInput
@@ -157,8 +145,8 @@ export default function SignInScreen() {
                   secureTextEntry={!showPassword}
                   placeholder="********"
                   placeholderTextColor={Colors.textMuted}
-                  onFocus={() => animateFocus(passFocus, 1)}
-                  onBlur={() => animateFocus(passFocus, 0)}
+                  onFocus={() => setPassFocused(true)}
+                  onBlur={() => setPassFocused(false)}
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
@@ -169,7 +157,7 @@ export default function SignInScreen() {
                     color={Colors.textMid}
                   />
                 </TouchableOpacity>
-              </Animated.View>
+              </View>
             </View>
 
             {/* Remember Me & Forgot Password */}

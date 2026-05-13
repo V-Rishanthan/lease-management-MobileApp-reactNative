@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
   Animated,
   Image,
@@ -28,36 +28,36 @@ export default function LandingScreen() {
         Animated.timing(logoOpacity, {
           toValue: 1,
           duration: 600,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(logoY, {
           toValue: 0,
           duration: 600,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]),
       Animated.parallel([
         Animated.timing(textOpacity, {
           toValue: 1,
           duration: 500,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(textY, {
           toValue: 0,
           duration: 500,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]),
       Animated.parallel([
         Animated.timing(botOpacity, {
           toValue: 1,
           duration: 500,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(botY, {
           toValue: 0,
           duration: 500,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]),
     ]).start();
@@ -90,7 +90,7 @@ export default function LandingScreen() {
           }}
         >
           <Image
-            source={require("../assets/images/LeaseTrack.png")}
+            source={require("../assets/icon.png")}
             style={styles.logoImage}
             resizeMode="contain"
           />

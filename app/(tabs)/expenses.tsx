@@ -532,6 +532,7 @@ const Expenses = () => {
   const total = expensesData.reduce((s, i) => s + i.amount, 0);
   const highest = expensesData.length > 0 ? Math.max(...expensesData.map((e) => e.amount)) : 0;
   const avgVal = expensesData.length > 0 ? Math.round(total / expensesData.length) : 0;
+  const totalFuel = expensesData.filter((e) => e.category === "Fuel").reduce((s, i) => s + i.amount, 0);
 
   const formatDate = (ds: string) => {
     const d = new Date(ds);
@@ -652,8 +653,8 @@ const Expenses = () => {
         {/* Sub stats */}
         <View style={s.subStats}>
           <View style={s.subStat}>
-            <Text style={s.subStatLabel}>Average</Text>
-            <Text style={s.subStatVal}>LKR {avgVal.toLocaleString()}</Text>
+            <Text style={s.subStatLabel}>Fuel Expenses</Text>
+            <Text style={s.subStatVal}>LKR {totalFuel.toLocaleString()}</Text>
           </View>
           <View style={s.subStatSep} />
           <View style={s.subStat}>

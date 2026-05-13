@@ -151,7 +151,7 @@ export default function addExpenses() {
 
       const payload = {
         vehicle_info_id: vehicleData.id,
-        id: user.user.id,
+        // Generate a unique UUID for the expense primary key
         expense_name: name.trim(),
         category: selectedCategory,
         price: priceNum,

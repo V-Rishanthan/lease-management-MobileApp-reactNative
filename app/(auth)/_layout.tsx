@@ -7,7 +7,8 @@ export default function AuthLayout() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: Colors.background },
-        animation: "fade",
+        // Avoid native-stack transition Animated paths that crash on RN 0.81 + Fabric.
+        animation: "none",
       }}
     >
       <Stack.Screen name="sign-in" />

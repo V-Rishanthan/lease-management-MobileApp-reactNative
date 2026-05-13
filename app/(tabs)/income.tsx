@@ -218,7 +218,7 @@ function DetailModal({
                 </View>
 
                 <View style={d.fieldGroup}>
-                  <Text style={d.label}>Number of Obstacles</Text>
+                  <Text style={d.label}>Number of land plowing Time</Text>
                   <TextInput
                     style={d.input}
                     value={editObstacles}
@@ -307,7 +307,7 @@ function DetailModal({
                     >
                       <AlertTriangle size={16} color={obsColor} />
                     </View>
-                    <Text style={d.tileLabel}>Obstacles</Text>
+                    <Text style={d.tileLabel}>land plowing</Text>
                     <Text style={[d.tileValMid, { color: obsColor }]}>
                       {item.obstacles}
                     </Text>

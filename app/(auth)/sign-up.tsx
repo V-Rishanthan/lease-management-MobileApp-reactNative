@@ -2,11 +2,10 @@ import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Animated,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -29,26 +28,10 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  // Animation Refs for Focus Effects
-  const firstFocus = useRef(new Animated.Value(0)).current;
-  const lastFocus = useRef(new Animated.Value(0)).current;
-  const emailFocus = useRef(new Animated.Value(0)).current;
-  const passFocus = useRef(new Animated.Value(0)).current;
-
-  const animateFocus = (anim: Animated.Value, val: number) => {
-    Animated.timing(anim, {
-      toValue: val,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
-  };
-
-  const interpolateBorder = (anim: Animated.Value) =>
-    anim.interpolate({
-      inputRange: [0, 1],
-      outputRange: [Colors.border, Colors.primary],
-    });
+  const [firstFocused, setFirstFocused] = useState(false);
+  const [lastFocused, setLastFocused] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passFocused, setPassFocused] = useState(false);
 
   const handleSignUp = async () => {
     if (!email || !password || !firstName) {
@@ -122,10 +105,14 @@ export default function SignUpScreen() {
             {/* Name Row */}
             <View style={styles.row}>
               <View style={[styles.inputGap, { flex: 1, marginRight: 10 }]}>
-                <Animated.View
+                <View
                   style={[
                     styles.inputBox,
-                    { borderColor: interpolateBorder(firstFocus) },
+                    {
+                      borderColor: firstFocused
+                        ? Colors.primary
+                        : Colors.border,
+                    },
                   ]}
                 >
                   <TextInput
@@ -134,16 +121,20 @@ export default function SignUpScreen() {
                     placeholderTextColor={Colors.textMuted}
                     value={firstName}
                     onChangeText={setFirstName}
-                    onFocus={() => animateFocus(firstFocus, 1)}
-                    onBlur={() => animateFocus(firstFocus, 0)}
+                    onFocus={() => setFirstFocused(true)}
+                    onBlur={() => setFirstFocused(false)}
                   />
-                </Animated.View>
+                </View>
               </View>
               <View style={[styles.inputGap, { flex: 1 }]}>
-                <Animated.View
+                <View
                   style={[
                     styles.inputBox,
-                    { borderColor: interpolateBorder(lastFocus) },
+                    {
+                      borderColor: lastFocused
+                        ? Colors.primary
+                        : Colors.border,
+                    },
                   ]}
                 >
                   <TextInput
@@ -152,10 +143,10 @@ export default function SignUpScreen() {
                     placeholderTextColor={Colors.textMuted}
                     value={lastName}
                     onChangeText={setLastName}
-                    onFocus={() => animateFocus(lastFocus, 1)}
-                    onBlur={() => animateFocus(lastFocus, 0)}
+                    onFocus={() => setLastFocused(true)}
+                    onBlur={() => setLastFocused(false)}
                   />
-                </Animated.View>
+                </View>
               </View>
             </View>
 
@@ -164,10 +155,12 @@ export default function SignUpScreen() {
               <View style={styles.labelWrapper}>
                 <Text style={styles.floatingLabel}>Email Address</Text>
               </View>
-              <Animated.View
+              <View
                 style={[
                   styles.inputBox,
-                  { borderColor: interpolateBorder(emailFocus) },
+                  {
+                    borderColor: emailFocused ? Colors.primary : Colors.border,
+                  },
                 ]}
               >
                 <TextInput
@@ -177,18 +170,20 @@ export default function SignUpScreen() {
                   placeholder="johndoe23@gmail.com"
                   placeholderTextColor={Colors.textMuted}
                   autoCapitalize="none"
-                  onFocus={() => animateFocus(emailFocus, 1)}
-                  onBlur={() => animateFocus(emailFocus, 0)}
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
                 />
-              </Animated.View>
+              </View>
             </View>
 
             {/* Password Field */}
             <View style={styles.inputGap}>
-              <Animated.View
+              <View
                 style={[
                   styles.inputBox,
-                  { borderColor: interpolateBorder(passFocus) },
+                  {
+                    borderColor: passFocused ? Colors.primary : Colors.border,
+                  },
                 ]}
               >
                 <TextInput
@@ -198,8 +193,8 @@ export default function SignUpScreen() {
                   secureTextEntry={!showPassword}
                   placeholder="Password"
                   placeholderTextColor={Colors.textMuted}
-                  onFocus={() => animateFocus(passFocus, 1)}
-                  onBlur={() => animateFocus(passFocus, 0)}
+                  onFocus={() => setPassFocused(true)}
+                  onBlur={() => setPassFocused(false)}
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
@@ -210,7 +205,7 @@ export default function SignUpScreen() {
                     color={Colors.textMid}
                   />
                 </TouchableOpacity>
-              </Animated.View>
+              </View>
             </View>
 
             {/* Action Button */}
